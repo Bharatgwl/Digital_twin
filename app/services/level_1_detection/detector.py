@@ -11,7 +11,7 @@ class HumanDetector:
     def detect(self, frame):
         results = self.model(frame, verbose=False)
         detections = []
-        
+
         for result in results:
             for box in result.boxes:
                 if int(box.cls[0]) == self.target_class:

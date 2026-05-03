@@ -1,0 +1,429 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{titlesec}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\title{CCTV-Based Digital Twin System\\
+System Modeling and Functional Requirements}
+
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{System Overview}
+
+The proposed system is a CCTV-based Digital Twin Platform designed to monitor people through camera feeds, identify and track individuals, and generate continuously updated digital profiles (digital twins).
+
+The system combines:
+\begin{itemize}
+    \item Computer Vision
+    \item Artificial Intelligence
+    \item Real-Time Tracking
+    \item Data Storage
+    \item Identity Management
+\end{itemize}
+
+The primary objective is to create a system capable of:
+\begin{itemize}
+    \item detecting people from CCTV feeds,
+    \item maintaining persistent identities,
+    \item storing behavioral and visual data,
+    \item and updating digital profiles over time.
+\end{itemize}
+
+\section{System Architecture Model}
+
+\subsection{High-Level Architecture}
+
+\begin{verbatim}
+CCTV Camera Feed
+        ↓
+Frame Capture Module
+        ↓
+Person Detection Module
+        ↓
+Multi-Object Tracking Module
+        ↓
+Feature Extraction Module
+        ↓
+Identity Matching Module
+        ↓
+Digital Twin Database
+        ↓
+Monitoring Dashboard
+\end{verbatim}
+
+\section{Core System Modules}
+
+\subsection{Frame Capture Module}
+
+\textbf{Purpose:}
+Captures real-time video streams from CCTV cameras.
+
+\textbf{Inputs:}
+\begin{itemize}
+    \item RTSP stream / Webcam feed / Video feed
+\end{itemize}
+
+\textbf{Outputs:}
+\begin{itemize}
+    \item Individual video frames
+\end{itemize}
+
+\textbf{Responsibilities:}
+\begin{itemize}
+    \item Continuous frame acquisition
+    \item Frame preprocessing
+    \item Resolution adjustment
+    \item Frame buffering
+\end{itemize}
+
+\subsection{Person Detection Module}
+
+\textbf{Purpose:}
+Detects humans within video frames.
+
+\textbf{Technology:}
+\begin{itemize}
+    \item YOLOv8 object detection model
+\end{itemize}
+
+\textbf{Inputs:}
+\begin{itemize}
+    \item Video frames
+\end{itemize}
+
+\textbf{Outputs:}
+\begin{itemize}
+    \item Bounding boxes of detected persons
+\end{itemize}
+
+\textbf{Responsibilities:}
+\begin{itemize}
+    \item Human detection
+    \item Confidence scoring
+    \item Coordinate generation
+\end{itemize}
+
+\subsection{Multi-Object Tracking Module}
+
+\textbf{Purpose:}
+Tracks detected individuals across consecutive frames.
+
+\textbf{Technology:}
+\begin{itemize}
+    \item DeepSORT / ByteTrack
+\end{itemize}
+
+\textbf{Inputs:}
+\begin{itemize}
+    \item Detection bounding boxes
+\end{itemize}
+
+\textbf{Outputs:}
+\begin{itemize}
+    \item Temporary tracking IDs
+\end{itemize}
+
+\textbf{Responsibilities:}
+\begin{itemize}
+    \item Assign IDs to detected persons
+    \item Maintain identity consistency across frames
+    \item Handle movement tracking
+\end{itemize}
+
+\subsection{Feature Extraction Module}
+
+\textbf{Purpose:}
+Extracts identifiable features from detected individuals.
+
+\textbf{Inputs:}
+\begin{itemize}
+    \item Person image crops
+\end{itemize}
+
+\textbf{Outputs:}
+\begin{itemize}
+    \item Feature vectors / embeddings
+\end{itemize}
+
+\textbf{Features Extracted:}
+\begin{itemize}
+    \item Face embeddings
+    \item Clothing color
+    \item Height estimation
+    \item Movement patterns
+\end{itemize}
+
+\textbf{Technologies:}
+\begin{itemize}
+    \item DeepFace
+    \item FaceNet
+    \item InsightFace
+\end{itemize}
+
+\subsection{Identity Matching Module}
+
+\textbf{Purpose:}
+Determines whether a detected individual already exists in the database.
+
+\textbf{Inputs:}
+\begin{itemize}
+    \item Feature embeddings
+    \item Existing database embeddings
+\end{itemize}
+
+\textbf{Outputs:}
+\begin{itemize}
+    \item Existing Person ID
+    \item OR
+    \item New Person ID
+\end{itemize}
+
+\textbf{Responsibilities:}
+\begin{itemize}
+    \item Similarity comparison
+    \item Identity persistence
+    \item Duplicate prevention
+\end{itemize}
+
+\subsection{Digital Twin Database Module}
+
+\textbf{Purpose:}
+Stores digital profiles and historical data.
+
+\textbf{Database Options:}
+\begin{itemize}
+    \item MongoDB
+    \item PostgreSQL
+\end{itemize}
+
+\textbf{Stored Data:}
+\begin{itemize}
+    \item Person ID
+    \item Face embeddings
+    \item Snapshots
+    \item Visit history
+    \item Movement trajectory
+    \item Behavioral statistics
+\end{itemize}
+
+\subsection{Monitoring Dashboard}
+
+\textbf{Purpose:}
+Provides visualization and monitoring interface.
+
+\textbf{Features:}
+\begin{itemize}
+    \item Live camera feed
+    \item Person tracking visualization
+    \item Profile viewing
+    \item Search functionality
+    \item Activity timeline
+\end{itemize}
+
+\section{Functional Requirements}
+
+\subsection{FR-1: Video Stream Acquisition}
+
+\textbf{Description:}
+The system shall capture video streams from CCTV cameras continuously.
+
+\textbf{Inputs:}
+\begin{itemize}
+    \item Live CCTV stream
+\end{itemize}
+
+\textbf{Outputs:}
+\begin{itemize}
+    \item Processable frames
+\end{itemize}
+
+\subsection{FR-2: Human Detection}
+
+\textbf{Description:}
+The system shall detect human presence in video frames.
+
+\textbf{Expected Behavior:}
+\begin{itemize}
+    \item Detect multiple persons simultaneously
+    \item Generate bounding boxes
+\end{itemize}
+
+\subsection{FR-3: Person Tracking}
+
+\textbf{Description:}
+The system shall maintain consistent tracking IDs for detected persons across frames.
+
+\textbf{Expected Behavior:}
+\begin{itemize}
+    \item Same person retains same tracking ID during movement
+\end{itemize}
+
+\subsection{FR-4: Feature Extraction}
+
+\textbf{Description:}
+The system shall extract identifiable visual features from detected individuals.
+
+\textbf{Features:}
+\begin{itemize}
+    \item Face embeddings
+    \item Clothing appearance
+    \item Spatial position
+\end{itemize}
+
+\subsection{FR-5: Identity Matching}
+
+\textbf{Description:}
+The system shall compare extracted features with stored profiles to identify repeated individuals.
+
+\textbf{Expected Behavior:}
+\begin{itemize}
+    \item Match returning individuals
+    \item Create new profiles for unknown individuals
+\end{itemize}
+
+\subsection{FR-6: Digital Profile Creation}
+
+\textbf{Description:}
+The system shall create a digital twin profile for each unique person.
+
+\textbf{Stored Information:}
+\begin{itemize}
+    \item Unique ID
+    \item Detection timestamps
+    \item Appearance snapshots
+    \item Historical movement data
+\end{itemize}
+
+\subsection{FR-7: Historical Data Management}
+
+\textbf{Description:}
+The system shall maintain historical records for future analysis.
+
+\textbf{Data Stored:}
+\begin{itemize}
+    \item Entry/exit time
+    \item Visit frequency
+    \item Camera locations
+\end{itemize}
+
+\subsection{FR-8: Real-Time Processing}
+
+\textbf{Description:}
+The system shall process incoming frames with minimal delay.
+
+\textbf{Requirement:}
+\begin{itemize}
+    \item Near real-time performance
+\end{itemize}
+
+\subsection{FR-9: Multi-Person Handling}
+
+\textbf{Description:}
+The system shall support simultaneous tracking of multiple individuals.
+
+\subsection{FR-10: Data Retrieval}
+
+\textbf{Description:}
+The system shall allow retrieval of digital twin profiles using unique person IDs.
+
+\section{Non-Functional Requirements}
+
+\subsection{Performance}
+
+\begin{itemize}
+    \item Real-time processing capability
+    \item Low latency detection and tracking
+\end{itemize}
+
+\subsection{Scalability}
+
+\begin{itemize}
+    \item Support multiple cameras
+    \item Handle large profile databases
+\end{itemize}
+
+\subsection{Reliability}
+
+\begin{itemize}
+    \item Continuous system operation
+    \item Stable identity tracking
+\end{itemize}
+
+\subsection{Security}
+
+\begin{itemize}
+    \item Secure storage of biometric information
+    \item Access-controlled database
+\end{itemize}
+
+\subsection{Privacy}
+
+\begin{itemize}
+    \item Minimize unnecessary personal data storage
+    \item Ensure ethical data handling
+\end{itemize}
+
+\section{Initial Prototype Scope}
+
+The first prototype will focus only on:
+\begin{itemize}
+    \item live video capture,
+    \item human detection,
+    \item tracking,
+    \item snapshot storage,
+    \item and simple digital profile generation.
+\end{itemize}
+
+Advanced features such as:
+\begin{itemize}
+    \item behavioral prediction,
+    \item emotion analysis,
+    \item and multi-camera synchronization
+\end{itemize}
+
+are outside the initial implementation scope.
+
+\section{Proposed Technology Stack}
+
+\begin{longtable}{|p{6cm}|p{7cm}|}
+\hline
+\textbf{Component} & \textbf{Technology} \\
+\hline
+Programming Language & Python \\
+\hline
+Computer Vision & OpenCV \\
+\hline
+Object Detection & YOLOv8 \\
+\hline
+Tracking & DeepSORT \\
+\hline
+Face Recognition & DeepFace / InsightFace \\
+\hline
+Database & MongoDB \\
+\hline
+Backend API & FastAPI \\
+\hline
+Frontend Dashboard & React / HTML \\
+\hline
+\end{longtable}
+
+\section{Expected Outcome}
+
+The final system should be capable of:
+\begin{itemize}
+    \item detecting people from CCTV feeds,
+    \item maintaining persistent identities,
+    \item generating digital profiles,
+    \item and updating those profiles continuously using real-time observations.
+\end{itemize}
+
+\end{document}

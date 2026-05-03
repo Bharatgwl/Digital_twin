@@ -3,7 +3,6 @@ uvicorn
 opencv-python
 ultralytics
 numpy
-python-multipart
 deepface
 tf-keras
-sqlalchemy
+pymongo

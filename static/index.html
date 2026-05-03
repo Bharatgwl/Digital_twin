@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Digital Twin Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+            padding: 16px;
+        }
+        .panel {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 14px;
+        }
+        img {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid #334155;
+        }
+        .kpi {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .kpi div {
+            background: #0b1220;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 8px 10px;
+            min-width: 120px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            border-bottom: 1px solid #334155;
+            text-align: left;
+            padding: 6px 4px;
+        }
+        .small {
+            color: #94a3b8;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <div class="panel">
+            <h2>Live Camera Feed</h2>
+            <p class="small">Real-time detection, tracking, identity persistence, and profile updates.</p>
+            <img src="/video" alt="Live CCTV stream" />
+        </div>
+        <div class="panel">
+            <h2>Digital Twin Status</h2>
+            <div class="kpi">
+                <div><strong id="activeTracks">0</strong><br />Active Tracks</div>
+                <div><strong id="totalProfiles">0</strong><br />Profiles</div>
+                <div><strong id="totalObs">0</strong><br />Observations</div>
+                <div><strong id="frameCount">0</strong><br />Processed Frames</div>
+            </div>
+            <h3>Recent Profiles</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Camera</th>
+                        <th>Seen</th>
+                    </tr>
+                </thead>
+                <tbody id="profilesBody"></tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        async function refreshStats() {
+            const statsResponse = await fetch("/stats/live");
+            const stats = await statsResponse.json();
+
+            document.getElementById("activeTracks").textContent = stats.active_tracks ?? 0;
+            document.getElementById("totalProfiles").textContent = stats.total_profiles ?? 0;
+            document.getElementById("totalObs").textContent = stats.total_observations ?? 0;
+            document.getElementById("frameCount").textContent = stats.processed_frames ?? 0;
+        }
+
+        async function refreshProfiles() {
+            const profilesResponse = await fetch("/digital-twins?limit=12");
+            const profiles = await profilesResponse.json();
+            const body = document.getElementById("profilesBody");
+            body.innerHTML = "";
+
+            profiles.forEach((profile) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${profile.person_id}</td>
+                    <td>${profile.last_camera_id ?? "-"}</td>
+                    <td>${profile.last_seen_at ?? "-"}</td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        async function refreshAll() {
+            await Promise.all([refreshStats(), refreshProfiles()]);
+        }
+
+        refreshAll();
+        setInterval(refreshAll, 3000);
+    </script>
+</body>
+</html>

@@ -1,93 +1,101 @@
+import os
+
 import cv2
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 
-from app.core.database import engine, SessionLocal
-from app.models.person import Person  # noqa: F401 — needed for table creation
-from app.core.database import Base
-from app.api.persons import router as persons_router
-from app.services.level_1_detection.detector import HumanDetector
-from app.services.level_2_tracking.tracker import HumanTracker
-from app.services.level_3_recognition.recognizer import FaceRecognizer
+from app.api.digital_twins import router as digital_twins_router
+from app.core.mongo import get_db, initialize_indexes
+from app.services.frame_capture.capture import FrameCapture
+from app.services.pipeline.runtime import DigitalTwinRuntime
 
-# Create all database tables on startup
-Base.metadata.create_all(bind=engine)
+
+VIDEO_SOURCE = os.getenv("VIDEO_SOURCE", "0")
+CAMERA_ID = os.getenv("CAMERA_ID", "CAM-1")
+FRAME_WIDTH = int(os.getenv("FRAME_WIDTH", "1280"))
+FRAME_HEIGHT = int(os.getenv("FRAME_HEIGHT", "720"))
+SNAPSHOT_INTERVAL = int(os.getenv("SNAPSHOT_INTERVAL", "20"))
+
+os.makedirs("static", exist_ok=True)
+os.makedirs("data", exist_ok=True)
+
+db = get_db()
+initialize_indexes(db)
+
+capture = FrameCapture(
+    source=VIDEO_SOURCE,
+    width=FRAME_WIDTH,
+    height=FRAME_HEIGHT,
+    buffer_size=30,
+)
+runtime = DigitalTwinRuntime(
+    db=db,
+    camera_id=CAMERA_ID,
+    snapshot_interval=SNAPSHOT_INTERVAL,
+    snapshot_root="data/snapshots",
+)
 
 app = FastAPI(title="CCTV Digital Twin System")
+app.include_router(digital_twins_router)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.state.runtime = runtime
 
-# Register API routes
-app.include_router(persons_router)
 
-detector = HumanDetector()
-tracker = HumanTracker()
-recognizer = FaceRecognizer()
+@app.on_event("startup")
+def ensure_database_connection():
+    db.command("ping")
 
 
 def stream_camera():
-    # Step 1: Capture from Webcam (0) or IP Camera [cite: 20, 21]
-    # video_path = "data/test_videos/TownCentreXVID.mp4"
-    # camera = cv2.VideoCapture(0)
-    
-    # use tracker  by live camera input
-    camera = cv2.VideoCapture(0)
-    
-    # Create a DB session for the stream
-    db = SessionLocal()
-    
     try:
         while True:
-            success, frame = camera.read()
-            
-            if not success:
-                camera.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            frame = capture.read()
+            if frame is None:
                 continue
 
-            # Level 1: Detect humans [cite: 17, 18]
-            # processed_frame, _ = detector.detect(frame)
-            processed_frame, current_count = tracker.track(frame)
-            
-            # Level 3: Recognize faces against the database
-            name, person_id = recognizer.recognize_from_db(frame, db)
-            
-            label = f"Identity: {name}"
-            if person_id:
-                label += f" (ID: {person_id})"
-            
+            processed_frame, active_count = runtime.process_frame(frame)
             cv2.putText(
                 processed_frame,
-                label,
-                (50, 50),
+                f"Active persons: {active_count}",
+                (16, 32),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 0, 255),
+                0.9,
+                (0, 255, 0),
                 2,
             )
-            # Encode frame as JPEG
-            _, buffer = cv2.imencode(".jpg", processed_frame)
+
+            encoded, buffer = cv2.imencode(".jpg", processed_frame)
+            if not encoded:
+                continue
+
             yield (
                 b"--frame\r\n"
                 b"Content-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n"
             )
     finally:
-        db.close()
-        camera.release()
+        capture.release()
 
 
-@app.get("/")
-def root():
-    return {"message": "CCTV System Level 1 Active"}
+@app.get("/", include_in_schema=False)
+def dashboard():
+    return FileResponse(os.path.join("static", "index.html"))
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "database": db.name}
 
 
 @app.get("/video")
 def video_feed():
-    # Serves the live feed to the browser [cite: 23]
     return StreamingResponse(
-        stream_camera(), media_type="multipart/x-mixed-replace; boundary=frame"
+        stream_camera(),
+        media_type="multipart/x-mixed-replace; boundary=frame",
     )
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    # Start the system manager [cite: 121]
     uvicorn.run(app, host="0.0.0.0", port=8000)
